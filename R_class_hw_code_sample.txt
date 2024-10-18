@@ -1,0 +1,224 @@
+---
+title: "Homework 3 Stat 3301"
+author: "Carter Andreasen"
+date: "2024-10-15"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+![Part 1A](IMG_0270.jpg)
+```{r}
+# Part 1A - See Picture
+# Part 1B
+set.seed(3301)
+mu <- 5
+theta = 3
+reps <- 5000
+alpha <- 0.01
+e.of.y.vals <- -mu * log(1 - runif(reps)) + runif(reps, -theta, theta)
+var.of.y.vals <- (e.of.y.vals - 5) ** 2
+
+barlist1 <- mean(e.of.y.vals)
+barlist2 <- mean(var.of.y.vals)
+s1 <- sd(e.of.y.vals)
+s2 <- sd(var.of.y.vals)
+
+tperc <- qt(1-alpha/2, reps-1)
+
+moe1 <- tperc*s1 / sqrt(reps)
+moe2 <- tperc*s2 / sqrt(reps)
+
+(conf.int1 <- c(barlist1 - moe1, barlist1 + moe1))
+(conf.int1 <- c(barlist2 - moe2, barlist2 + moe2))
+# Our given mu is 5, and using our variance formula, we should see that var(y)
+# is equal to 28
+# We can see that E(Y) = 5 and var(Y) = 28 are both contained in the intervals
+
+[1] 4.787962 5.172848
+[1] 24.96945 30.79495
+
+```
+## Part 1C
+```{r}
+set.seed(3301)
+mu0 <- 5
+theta = 1.5
+reps <- 10000
+n = 20
+t.stat.list <- numeric(reps)
+
+y.mat <- matrix(-mu * log(1 - runif(reps * n)) + runif(reps * n, -theta, theta), nrow=reps, ncol=n)
+y.bar.list <- apply(y.mat, 1, mean)
+y.s.list <- apply(y.mat, 1, sd)
+
+t.stat.list <- (y.bar.list - mu0)/(y.s.list/sqrt(n))
+
+plot(qt(ppoints(reps), n - 1), quantile(t.stat.list, ppoints(reps)))
+abline(0,1)
+```
+
+
+## Part 1D Explanation:
+```{r}
+# The data deviates heavily from the y = x line. 
+# The underlying data is not normal and n is relatively small in this case, 
+# only 20, so we expect deviation, following the expectations of CLT
+```
+
+# Part 1E
+```{r}
+set.seed(3301)
+mu0 <- 10
+mu = 8
+theta = 2
+reps <- 10000
+n = 277
+alpha2 <- 0.01
+
+fast.est.power.ttest <- function(n, mu0, alpha, mu, reps) {
+  y.mat <- matrix(-mu * log(1 - runif(reps * n)) + runif(reps * n, -theta, theta), nrow=reps, ncol=n)
+  ## compute the reps observed sample means
+  y.bar.list <- apply(y.mat, 1, mean)
+  ## compute the reps observed sample sd’s
+  y.s.list <- apply(y.mat, 1, sd)
+  ## compute the reps observed realizations of T
+  t.list <- (y.bar.list - mu0)/(y.s.list/sqrt(n))
+  ## compute the proportion of rejected null hypotheses
+  ## (the mean of a sequence of TRUE/FALSE is the proportion
+  ##  of TRUE)
+  prop.rejected <- mean(abs(t.list) > qt(1-alpha/2, n-1))
+  return(prop.rejected)
+}
+
+(power <- fast.est.power.ttest(n, mu0, alpha2, mu, reps=1e4))
+
+n.seq <- seq(from=10, to=500, by=10)
+power.est <- numeric(length(n.seq))
+for (i in 1:length(n.seq)) {
+  power.est[i] <- fast.est.power.ttest(n = n.seq[i], mu0, alpha2, mu, reps)
+}
+plot(n.seq, power.est, type="o", xlab="sample size", 
+     ylab = "Est. rejection probability", main = "Plot: Part 1E")
+abline(v=277, h=0.9, col="blue", lty=2)
+
+# By plotting a vertical line at x = 277 and a horizontal at y = 0.9, we can see
+# that n = 277 delivers a power of almost exactly 0.9.
+```
+
+[1] 0.9016
+
+## Part 1F
+```{r}
+set.seed(3301)
+mu0 <- 10
+mu = 8
+theta = 2
+reps <- 20000
+n = 100
+alpha1 <- 0.01
+
+y.mat <- matrix(-mu * log(1 - runif(reps * n)) + runif(reps * n, -theta, theta), nrow=reps, ncol=n)
+y.bar.list <- apply(y.mat, 1, mean)
+y.s.list <- apply(y.mat, 1, sd)
+t.list <- (y.bar.list - mu0)/(y.s.list/sqrt(n))
+
+
+(conf.int <- prop.test(x=sum(t.list < alpha1), n=reps, conf.level = 1-alpha1, correct = FALSE)$conf.int)
+
+# Part 1G
+# From this interval, we can see that our power lies around 0.99, which is
+# what we expect with an alpha value of 0.01. In layman's terms, we
+# will correctly reject H0 in favor of HA about 99% of trials. This is what
+# we hope for as we set mu and mu0 apart from each other
+```
+
+[1] 0.9868773 0.9906984
+attr(,"conf.level")
+[1] 0.99
+
+## Question 2
+## Part 2A
+```{r}
+set.seed(3301)
+# To make inference on the attendance of the Twins games, we must assume that 
+# they are identical replications of the same random variable with the same 
+# distribution, and that from one trial to the other 
+# they are each independent to every other trial
+
+
+twins.dat <- read.csv("Twins2023.csv", header=T)
+
+# extract home game attendance
+attend <- twins.dat$Attendance[twins.dat$X.1 == "@"]
+```
+
+## Part 2B
+```{r}
+plot(twins.dat$Gm., twins.dat$Attendance, xlab = "Game number", ylab = "Number of fans at game", type = 'o', pch = 20)
+# There is no visual evidence against the fact that each realization is of the 
+# same random variable. Each realization appears to be random, and separate
+# from the previous and the next.There no visible patterns within the data.
+```
+
+## Part 2C
+```{r}
+t.test(attend, conf.level=0.95)$conf.int
+
+# Part 2D
+# The interpretation is false. What the interval actually means is that if
+# we were to conduct an infinite number of trials over infinite seasons, 
+# the interval would contain approximately 95% of the means of the trials.
+```
+
+[1] 24661.96 29836.21
+attr(,"conf.level")
+[1] 0.95
+
+## Part 2E
+```{r}
+set.seed(3301)
+alpha <- 0.01
+game.list <- round(rnorm(81, mean = 27000, sd = 11000))
+mu <- mean(game.list)
+moe <- qnorm(1 - alpha/2) * sd(attend) / 9
+
+("99% conf int")
+(conf <- c(mu - moe, mu + moe))
+(mu)
+
+# Note: the 99% confidence interval is wider than the 95% confidence interval.
+# This makes sense, as the 99% interval should have larger coverage probability 
+# and a larger width, as the value of qnorm should be larger, making the 
+# margin of error larger. 
+
+success.list <- numeric(40)
+for (i in 1:40) {
+  game.list1 <- round(rnorm(81, mean = 27000, sd = 11000))
+  mu1 <- mean(game.list)
+  moe1 <- qnorm(1 - alpha/2) * sd(game.list1) / 9
+  left <- mu1 - moe1
+  right <- mu1 + moe1
+  success.list[i] <- 1*(left < 27000 && right > 27000)
+}
+
+(mean(success.list))
+```
+
+[1] "99% conf int"
+[1] 24887.81 31585.08
+[1] 28236.44
+[1] 1
+
+## Part 2F
+```{r}
+hist(attend)
+# The two node histogram could be due to the different series that the Twins
+# had in the 2023 season. Some series could have been against bad teams and
+# consequently had low attendance. On the other hand, there could have been 
+# highly anticipated series which had high attendance. 
+```
+
