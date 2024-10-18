@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 try:
  
     # define a connection object
-    conn = connect(user='root', password='Profess191013ftme',
+    conn = connect(user='root', password='**********',
                 host='127.0.0.1',
                 database='personal')
  
